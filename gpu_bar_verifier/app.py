@@ -24,6 +24,13 @@ from .verify import SuiteResult, run_suite  # noqa: E402
 from .xcapture import CaptureError, capture_by_title  # noqa: E402
 
 APP_ID = "io.github.kram1nctrl.GpuBarVerifier"
+APP_NAME = "GPU Bar Verifier"
+ICON_NAME = "gpu-bar-verifier"
+PRGNAME = "gpu-bar-verifier"
+WM_CLASS = "GpuBarVerifier"
+
+ASSETS = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "assets")
 CACHE_DIR = os.path.join(
     os.environ.get("XDG_CACHE_HOME", os.path.expanduser("~/.cache")),
     "gpu-bar-verifier")
@@ -35,7 +42,33 @@ CSS = b"""
 .fail { color: #e01b24; font-weight: 600; }
 .dim { color: #888888; }
 .big { font-size: 17px; font-weight: 700; }
+.badge { font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 8px;
+         background: #555555; color: #ffffff; }
+.badge-nvidia { background: #76b900; color: #102000; }
+.badge-intel { background: #0071c5; color: #ffffff; }
+.badge-amd { background: #ed1c24; color: #ffffff; }
 """
+
+
+def app_icon(size: int = 128):
+    """The bundled icon as a pixbuf, or None when running from a source tree."""
+    path = os.path.join(ASSETS, "icons", f"gpu-bar-verifier-{size}.png")
+    try:
+        return GdkPixbuf.Pixbuf.new_from_file(path)
+    except (GLib.Error, OSError):
+        return None
+
+
+def vendor_of(name: str) -> str:
+    """Short vendor tag used for the badge next to the GPU name."""
+    lowered = name.casefold()
+    if "nvidia" in lowered or "geforce" in lowered or "quadro" in lowered:
+        return "NVIDIA"
+    if "intel" in lowered or "arc" in lowered or "iris" in lowered:
+        return "INTEL"
+    if "amd" in lowered or "radeon" in lowered:
+        return "AMD"
+    return ""
 
 
 def _pil_to_pixbuf(image, max_w: int, max_h: int):
@@ -67,10 +100,21 @@ class VerifierWindow(Gtk.ApplicationWindow):
         self._last_result: SuiteResult | None = None
         self._last_image = None
 
+        Gtk.Window.set_default_icon_name(ICON_NAME)
+        icon = app_icon(128)
+        if icon is not None:
+            self.set_icon(icon)
+
         header = Gtk.HeaderBar(show_close_button=True)
-        header.set_title("GPU Bar Verifier")
+        header.set_title(APP_NAME)
         header.set_subtitle("Prove the utilization bar follows real load")
         self.set_titlebar(header)
+
+        logo = app_icon(48)
+        if logo is not None:
+            logo_image = Gtk.Image.new_from_pixbuf(logo)
+            logo_image.set_tooltip_text(APP_NAME)
+            header.pack_start(logo_image)
 
         about = Gtk.Button.new_from_icon_name("help-about-symbolic",
                                               Gtk.IconSize.BUTTON)
@@ -104,11 +148,17 @@ class VerifierWindow(Gtk.ApplicationWindow):
         gpu_frame = Gtk.Frame(label="GPU")
         gpu_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         gpu_box.set_border_width(10)
+        name_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         self.gpu_name = Gtk.Label(label="detecting…", xalign=0)
         self.gpu_name.get_style_context().add_class("big")
+        self.vendor_badge = Gtk.Label(label="", no_show_all=True)
+        self.vendor_badge.get_style_context().add_class("badge")
+        name_row.pack_start(self.gpu_name, False, False, 0)
+        name_row.pack_start(self.vendor_badge, False, False, 0)
+
         self.gpu_driver = Gtk.Label(label="", xalign=0)
         self.gpu_driver.get_style_context().add_class("dim")
-        gpu_box.pack_start(self.gpu_name, False, False, 0)
+        gpu_box.pack_start(name_row, False, False, 0)
         gpu_box.pack_start(self.gpu_driver, False, False, 0)
         gpu_frame.add(gpu_box)
         box.pack_start(gpu_frame, False, False, 0)
@@ -439,6 +489,7 @@ class VerifierWindow(Gtk.ApplicationWindow):
         else:
             self.gpu_name.set_text(stats.name)
             self.gpu_driver.set_text(f"driver {stats.driver}")
+            self._set_vendor(vendor_of(stats.name))
             self.metrics["util"].set_text(
                 "–" if stats.utilization is None else f"{stats.utilization:.0f}%")
             self.metrics["clock"].set_text(
@@ -459,12 +510,28 @@ class VerifierWindow(Gtk.ApplicationWindow):
             self.stop_btn.set_sensitive(False)
         return True
 
+    def _set_vendor(self, vendor: str) -> None:
+        context = self.vendor_badge.get_style_context()
+        for cls in ("badge-nvidia", "badge-intel", "badge-amd"):
+            context.remove_class(cls)
+        if not vendor:
+            self.vendor_badge.set_no_show_all(True)
+            self.vendor_badge.hide()
+            return
+        self.vendor_badge.set_text(vendor)
+        context.add_class(f"badge-{vendor.casefold()}")
+        self.vendor_badge.set_no_show_all(False)
+        self.vendor_badge.show()
+
     def _on_destroy(self, _widget) -> None:
         self.loader.stop()
 
     def _on_about(self, _button) -> None:
         dialog = Gtk.AboutDialog(transient_for=self, modal=True)
-        dialog.set_program_name("GPU Bar Verifier")
+        dialog.set_program_name(APP_NAME)
+        logo = app_icon(128)
+        if logo is not None:
+            dialog.set_logo(logo)
         dialog.set_version(__version__)
         dialog.set_comments(
             "Generates a controllable GPU load and verifies that a utilization "
@@ -499,8 +566,18 @@ class VerifierApp(Gtk.Application):
 
 
 def main(window_title: str = "Performance Monitor") -> int:
-    app = VerifierApp(window_title)
-    return app.run([])
+    # Deterministic WM_CLASS / taskbar identity: the desktop entry names
+    # GpuBarVerifier as StartupWMClass so the launcher and the window share
+    # one icon and one entry instead of showing a generic "python3" window.
+    GLib.set_prgname(PRGNAME)
+    GLib.set_application_name(APP_NAME)
+    Gtk.Window.set_default_icon_name(ICON_NAME)
+    # The "class" half of WM_CLASS is what StartupWMClass in the .desktop file
+    # matches; without this GDK derives it from argv[0] ("Cli.py") and the
+    # launcher shows a second, icon-less entry.
+    Gdk.set_program_class(WM_CLASS)
+
+    return VerifierApp(window_title).run([])
 
 
 if __name__ == "__main__":

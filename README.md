@@ -5,6 +5,10 @@ the number is bound to the right property.
 
 ![GPU Bar Verifier](docs/screenshot.png)
 
+<p align="center">
+  <img src="docs/menu-search.png" alt="GPU Bar Verifier in the application menu" width="360">
+</p>
+
 On hybrid laptops (Intel iGPU + NVIDIA dGPU in PRIME `on-demand` mode) the
 discrete GPU is genuinely idle most of the time, so its utilization bar sits at
 0%. That looks exactly like a broken UI. This tool settles the question: it puts
@@ -24,6 +28,12 @@ pixels — that the bar fills to match what `nvidia-smi` reports.
 4. **Measures the painted fill** in pixels and compares it with the hardware
    reading, per step, with a PASS/FAIL verdict, a monotonicity check, JSON
    report and screenshots.
+
+## Download
+
+* **Releases** (source archive + notes): <https://github.com/Kram1nctrl/gpu-bar-verifier/releases/latest>
+* **ZIP of `main`**: <https://github.com/Kram1nctrl/gpu-bar-verifier/archive/refs/heads/main.zip>
+* or `git clone https://github.com/Kram1nctrl/gpu-bar-verifier.git`
 
 ## Requirements
 
@@ -53,6 +63,31 @@ Or run straight from the checkout, no installation:
 ```bash
 ./bin/gpu-bar-verifier
 ```
+
+### What the installer puts where
+
+| Path | Contents |
+|---|---|
+| `~/.local/bin/gpu-bar-verifier` | launcher |
+| `~/.local/lib/gpu-bar-verifier/` | the application and its assets |
+| `~/.local/share/applications/gpu-bar-verifier.desktop` | menu entry |
+| `~/.local/share/icons/hicolor/{16,24,32,48,64,128,256,512}x*/apps/` | icons |
+| `~/.local/share/icons/hicolor/scalable/apps/` | vector icon |
+
+### Desktop integration
+
+After `./install.sh` the app is a normal desktop citizen:
+
+* it appears in the application menu and **is searchable** — type `GPU`, `NVIDIA`,
+  `utilization`, `verify`, `prime` or `optimus` in the menu's search box
+  (the `.desktop` entry carries all of those as keywords);
+* the launcher, taskbar, window switcher and About dialog all use the same
+  icon, at the right size for each (8 raster sizes + SVG);
+* the window declares `WM_CLASS = gpu-bar-verifier/GpuBarVerifier`, which
+  matches `StartupWMClass` in the desktop entry, so the running window is
+  grouped with its launcher instead of showing up as a second "python3" entry;
+* icons and the desktop database are refreshed on install and on
+  `./install.sh --uninstall`.
 
 ## Usage
 
