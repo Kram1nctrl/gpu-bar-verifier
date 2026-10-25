@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=GPU Bar Verifier
+GenericName=GPU Utilization Bar Tester
+Comment=Load the discrete GPU and verify that its utilization bar follows reality
+Exec=@EXEC@
+Icon=gpu-bar-verifier
+Terminal=false
+Categories=System;Monitor;Utility;
+Keywords=GPU;NVIDIA;utilization;monitor;verify;test;bar;
+StartupNotify=true

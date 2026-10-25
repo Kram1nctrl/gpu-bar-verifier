@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Run GPU Bar Verifier straight from a checkout, without installing.
+set -euo pipefail
+
+HERE="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+export PYTHONPATH="$HERE${PYTHONPATH:+:$PYTHONPATH}"
+exec python3 -m gpu_bar_verifier.cli "$@"

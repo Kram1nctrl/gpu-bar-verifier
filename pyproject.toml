@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gpu-bar-verifier"
+version = "1.0.0"
+description = "Verify that a GPU utilization bar follows real hardware load"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Kram1nctrl" }]
+keywords = ["gpu", "nvidia", "utilization", "testing", "monitoring", "x11"]
+classifiers = [
+    "Environment :: X11 Applications :: GTK",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Topic :: System :: Monitoring",
+    "Topic :: Software Development :: Testing",
+]
+dependencies = ["Pillow>=9.2"]
+
+[project.optional-dependencies]
+gui = ["PyGObject>=3.42"]
+
+[project.scripts]
+gpu-bar-verifier = "gpu_bar_verifier.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/Kram1nctrl/gpu-bar-verifier"
+
+[tool.setuptools]
+packages = ["gpu_bar_verifier"]
